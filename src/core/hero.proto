@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package hero;
+
+service HeroesService {
+  rpc FindOne (HeroById) returns (Hero) {}
+   rpc liveCartValue (stream Book) returns (stream Cart) {}
+}
+
+message HeroById {
+  int32 id = 1;
+}
+
+message Hero {
+  int32 id = 1;
+  string name = 2;
+}
+message Book {
+   string name = 1;
+   string author = 2;
+   int32 price = 3;
+}
+message Cart {
+   int32 books = 1;
+   int32 price = 2;
+}

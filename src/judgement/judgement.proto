@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package hero;
+
+service JudgementService {
+  rpc CreateJudgement(CreateJudgementRequest)
+      returns (CreateJudgementResponse) {}
+}
+
+message CreateJudgementRequest { int32 id = 1; }
+
+message CreateJudgementResponse {
+  int32 id = 1;
+  string name = 2;
+}

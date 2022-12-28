@@ -7,7 +7,19 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Socket, Server } from 'socket.io';
-import * as pty from 'node-pty';
+import { WorkerService } from '@/worker/worker.service';
+import { MikroORM, UseRequestContext, UuidType } from '@mikro-orm/core';
+import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
+import { v4 as uuid } from 'uuid';
+import { JudgementService } from '@/judgement/judgement.service';
+import { CTFJudgement } from '@/judgement/entities/judgement.entity';
+
+// TODO: use redis!
+// workerMap maps worker id to the worker socket
+let workerMap = new Map<number, Socket>();
+
+// userMap maps session to the user socket
+let userMap = new Map<string, Socket>();
 
 @WebSocketGateway({
   cors: {
@@ -17,13 +29,18 @@ import * as pty from 'node-pty';
 export class WsGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
-  @WebSocketServer() server: Server;
+  constructor(
+    private orm: MikroORM,
+    private readonly workerService: WorkerService,
+    private readonly judgementService: JudgementService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
+  @WebSocketServer() server: Server;
   afterInit(server: Server) {}
 
   handleDisconnect(client: Socket) {
     console.log(`Disconnected: ${client.id}`);
-    //Do stuffs
     client.removeAllListeners();
   }
 
@@ -40,27 +57,89 @@ export class WsGateway
     // });
   }
 
+  // @OnEvent('vm.create')
+  // handleVmCreateEvent(payload: OrderCreatedEvent) {
+  //   // handle and process "OrderCreatedEvent" event
+  // }
+
   @SubscribeMessage('register')
-  handleRegister(client: Socket, data) {
+  @UseRequestContext()
+  async handleRegister(client: Socket, data: any) {
     console.log(data);
-    if (data === 'USER') {
-      // const term = pty.spawn("ssh", ["-p", "2222", "-t", "root@127.0.0.1", 'podman run --rm -it ubuntu /bin/bash'], {
-      // const term = pty.spawn("podman", ["run", "--rm", "-it", "-v", "/home/hitomi/Developer/seed/Labsetup/server-code:/bof", "ubuntu", "/bin/bash"], {
-      const term = pty.spawn('bash', ['--login'], {
-        name: 'xterm-color',
-        cols: 80,
-        rows: 24,
-        cwd: process.env.HOME,
-        env: process.env,
+    const { type } = data;
+    if (type === 'judger') {
+      const { name, token } = data;
+      if (!name || !token) {
+        client.send('invalid');
+        client.disconnect();
+        return;
+      }
+
+      const worker = await this.workerService.findByName(name);
+      if (worker.token !== token) {
+        client.send('invalid');
+        client.disconnect();
+        return;
+      }
+      workerMap.set(worker.id, client);
+    }
+    if (type === 'user') {
+      const { judgement } = data;
+      if (!judgement) {
+        client.send('invalid');
+        client.disconnect();
+        return;
+      }
+      const j = await this.judgementService.findoneCTFJudgementByName(
+        judgement,
+      );
+      if (!j) {
+        client.send('invalid');
+        client.disconnect();
+        return;
+      }
+
+      const session = uuid();
+      console.log(judgement, session);
+      userMap.set(session, client);
+
+      console.log(j.vm);
+      // wait for corresponding worker to be online
+      const int = setInterval(() => {
+        const workerId = j.vm.worker.id;
+        if (workerMap.has(workerId)) {
+          const worker = workerMap.get(j.vm.worker.id);
+          if (worker) {
+            worker.emit('env', { opt: 'CREATE', session, context: judgement });
+            clearInterval(int);
+          }
+        }
+      }, 1000);
+    }
+    if (type === 'vm') {
+      const { session } = data;
+      const user = userMap.get(session);
+      if (!user || user.disconnected) {
+        client.send('gone');
+        client.disconnect();
+        return;
+      }
+
+      user.emit('term-ready');
+
+      user.on('term-input', (data: string) => {
+        client.emit('term-input', data);
       });
-      client.on('term-input', (data) => term.write(data));
-      term.onData((data) => client.emit('term-output', data));
+
+      client.on('term-output', (data: string) => {
+        user.emit('term-output', data);
+      });
     }
   }
 
   @SubscribeMessage('message')
   handleMessage(client: Socket, data: string) {
-    console.log(data);
-    client.emit('env', 'CREATE');
+    // console.log(data);
+    // client.emit('env', 'CREATE');
   }
 }
