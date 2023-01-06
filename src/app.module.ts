@@ -16,6 +16,11 @@ import { UserModule } from './user/user.module';
 import { WorkerModule } from './worker/worker.module';
 import { VmModule } from './vm/vm.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ClientModule } from './client/client.module';
+import { TaskModule } from './task/task.module';
+import { InterpreterModule } from './interpreter/interpreter.module';
+import { RedisModule } from '@liaoliaots/nestjs-redis';
+import { ProgramModule } from './program/program.module';
 
 @Module({
   imports: [
@@ -25,6 +30,13 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
       envFilePath: ['.env.development', '.env', '.env.production'],
     }),
 
+    RedisModule.forRoot({
+      config: {
+        host: 'localhost',
+        port: 6379,
+      },
+    }),
+
     MikroOrmModule.forRoot(),
     WsModule,
     CoreModule,
@@ -32,6 +44,10 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
     UserModule,
     WorkerModule,
     VmModule,
+    ClientModule,
+    TaskModule,
+    InterpreterModule,
+    ProgramModule,
   ],
   controllers: [AppController],
   providers: [AppService],

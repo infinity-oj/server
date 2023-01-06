@@ -1,9 +1,11 @@
+import { Client } from '@/client/entities/client.entity';
 import { EntityManager, EntityRepository, MikroORM } from '@mikro-orm/core';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import { Injectable } from '@nestjs/common';
 import { CreateJudgementDto } from './dto/create-judgement.dto';
 import { UpdateJudgementDto } from './dto/update-judgement.dto';
-import { CTFJudgement, Judgement } from './entities/judgement.entity';
+import { Judgement, JudgementStatus } from './entities/judgement.entity';
+import { v4 as uuid } from 'uuid';
 
 @Injectable()
 export class JudgementService {
@@ -15,20 +17,21 @@ export class JudgementService {
     return 'This action adds a new judgement';
   }
 
-  async findoneCTFJudgementByName(name: string) {
-    return await this.em.findOneOrFail(
-      CTFJudgement,
-      { name },
-      { populate: ['vm'] },
-    );
+  async createJudgement(client: Client) {
+    const judgement = new Judgement();
+    judgement.name = uuid();
+    judgement.client = client;
+    judgement.status = JudgementStatus.Pending;
+    await this.em.fork().persistAndFlush(judgement);
+    return judgement;
   }
 
   findAll() {
     return `This action returns all judgement`;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} judgement`;
+  async findOne(id: number) {
+    return await this.em.findOneOrFail(Judgement, { id });
   }
 
   update(id: number, updateJudgementDto: UpdateJudgementDto) {

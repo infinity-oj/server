@@ -1,7 +1,15 @@
-import { Entity, Enum, OneToOne, PrimaryKey, Property } from '@mikro-orm/core';
+import {
+  Entity,
+  Enum,
+  ManyToOne,
+  OneToOne,
+  PrimaryKey,
+  Property,
+} from '@mikro-orm/core';
 import { VM } from '@/vm/entities/vm.entity';
+import { Client } from '@/client/entities/client.entity';
 
-export enum TraditionJudgementStatus {
+export enum JudgementStatus {
   Pending,
   Canceled,
 
@@ -26,32 +34,32 @@ export enum CTFJudgementStatus {
   Accepted,
 }
 
-@Entity({
-  discriminatorColumn: 'type',
-  discriminatorMap: { judgement: 'Judgement', ctfJudgement: 'CTFJudgement' },
-})
+@Entity()
 export class Judgement {
   @PrimaryKey()
   id: number;
 
   @Property()
   name!: string;
-}
 
-@Entity()
-export class CTFJudgement extends Judgement {
-  @Enum(() => CTFJudgementStatus)
-  status!: CTFJudgementStatus;
+  @ManyToOne()
+  client: Client;
 
-  @OneToOne()
-  vm!: VM;
-}
+  @Enum(() => JudgementStatus)
+  status!: JudgementStatus;
 
-@Entity()
-export class TraditionJudgement extends Judgement {
-  @Enum(() => TraditionJudgementStatus)
-  status!: TraditionJudgementStatus;
+  @Property({ nullable: true })
+  publicVolume: string;
 
-  @OneToOne()
-  vm!: VM;
+  @Property({ nullable: true })
+  privateVolume: string;
+
+  @Property({ nullable: true })
+  userVolume: string;
+
+  @Property({ nullable: true })
+  token: string;
+
+  @Property({ nullable: true })
+  fileToken: string;
 }
