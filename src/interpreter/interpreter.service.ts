@@ -85,15 +85,27 @@ export class InterpreterService {
         return _.intersection(p.inputs, keys).length !== 0;
       })
       .map(async (p) => {
-        const inputs = await this.redis.hmget(
+        const temps = await this.redis.hmget(
           pid,
           ...p.inputs.map((i) => i.toString()),
         );
-        if (inputs.some((res) => _.isEmpty(res))) {
+        if (temps.some((res) => _.isNil(res))) {
           return [];
         }
 
         const newProgram = await this.programService.findOneByName(p.name);
+
+        const inputs = _.zipWith(
+          newProgram.inputs.slots,
+          temps,
+          (slot, result) => {
+            if (slot.type === 'number') {
+              return +result;
+            }
+            return result;
+          },
+        );
+
         const res = await this.run(newProgram, inputs, pid);
         if ('pid' in res) {
           // asynchronized process
@@ -159,10 +171,12 @@ export class InterpreterService {
       if (!_.isEmpty(result)) {
         // has result once run
         console.log(pid, result);
+        await this.redis.del(pid);
         return { result };
       }
       k = await this.despatch(program, pid, k);
     }
+    await this.redis.zadd('processes', new Date().getTime(), pid);
     return { pid };
   }
 
@@ -196,6 +210,7 @@ export class InterpreterService {
       if (result) {
         await this.finish(pid, result);
         console.log(pid, result);
+        await this.redis.del(pid);
         return { result };
       }
       k = await this.despatch(program, pid, k);
