@@ -23,7 +23,7 @@ export class Program {
   @PrimaryKey()
   id: number;
 
-  @Property()
+  @Property({ unique: true })
   name: string;
 
   @Property({ type: 'json' })

@@ -1,3 +1,4 @@
+import { builtins } from '@/program/builtins';
 import { Program } from '@/program/entities/program.entity';
 import { ProgramService } from '@/program/program.service';
 import { InjectRedis } from '@liaoliaots/nestjs-redis';
@@ -53,14 +54,22 @@ export class InterpreterService {
       return null;
     }
 
-    const result = await this.redis.hmget(
+    const temps = await this.redis.hmget(
       pid,
       ...outputKeys.map((i) => i.toString()),
     );
-    if (result.some((res) => _.isEmpty(res))) {
+
+    const results = _.zipWith(program.outputs.slots, temps, (slot, result) => {
+      if (slot.type === 'number') {
+        return +result;
+      }
+      return result;
+    });
+
+    if (results.some((res) => _.isNil(res))) {
       return null;
     }
-    return result;
+    return results;
   }
 
   /**
@@ -76,16 +85,16 @@ export class InterpreterService {
         return _.intersection(p.inputs, keys).length !== 0;
       })
       .map(async (p) => {
-        const result = await this.redis.hmget(
+        const inputs = await this.redis.hmget(
           pid,
           ...p.inputs.map((i) => i.toString()),
         );
-        if (result.some((res) => _.isEmpty(res))) {
+        if (inputs.some((res) => _.isEmpty(res))) {
           return [];
         }
 
         const newProgram = await this.programService.findOneByName(p.name);
-        const res = await this.run(newProgram, result, pid);
+        const res = await this.run(newProgram, inputs, pid);
         if ('pid' in res) {
           // asynchronized process
           await this.redis.hmset(pid, {
@@ -117,6 +126,17 @@ export class InterpreterService {
       }
     | { result: Array<string | number> }
   > {
+    for (const builtin of builtins) {
+      if (
+        builtin.program.name === program.name &&
+        'implementation' in builtin
+      ) {
+        return {
+          result: builtin.implementation(...inputs),
+        };
+      }
+    }
+
     const pid = `p-${uuid()}`;
     await this.redis.del(pid);
 
@@ -136,7 +156,7 @@ export class InterpreterService {
     let k = keys;
     while (!_.isEmpty(k)) {
       const result = await this.getResult(program, pid, k);
-      if (result) {
+      if (!_.isEmpty(result)) {
         // has result once run
         console.log(pid, result);
         return { result };

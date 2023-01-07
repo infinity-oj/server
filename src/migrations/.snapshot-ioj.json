@@ -245,6 +245,15 @@
       "name": "program",
       "indexes": [
         {
+          "columnNames": [
+            "name"
+          ],
+          "composite": false,
+          "keyName": "program_name_unique",
+          "primary": false,
+          "unique": true
+        },
+        {
           "keyName": "PRIMARY",
           "columnNames": [
             "id"
