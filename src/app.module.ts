@@ -21,6 +21,8 @@ import { TaskModule } from './task/task.module';
 import { InterpreterModule } from './interpreter/interpreter.module';
 import { RedisModule } from '@liaoliaots/nestjs-redis';
 import { ProgramModule } from './program/program.module';
+import { FileModule } from './file/file.module';
+import { StatModule } from './stat/stat.module';
 
 @Module({
   imports: [
@@ -48,6 +50,8 @@ import { ProgramModule } from './program/program.module';
     TaskModule,
     InterpreterModule,
     ProgramModule,
+    FileModule,
+    StatModule,
   ],
   controllers: [AppController],
   providers: [AppService],

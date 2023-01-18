@@ -6,12 +6,34 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import Redis from 'ioredis';
 import _ from 'lodash';
 
-// import { v4 as uuid } from 'uuid';
+import { v4 as uuid } from 'uuid';
 
-const uuid = (() => {
-  let cnt = 0;
-  return () => cnt++;
-})();
+export enum SlotType {
+  STRING = 'STRING',
+  NUMBER = 'NUMBER',
+  LOCAL_FILE = 'LOCAL_FILE',
+  REMOTE_FILE = 'REMOTE_FILE',
+}
+
+export type SlotValue =
+  | {
+      type: SlotType.NUMBER;
+      value: number;
+    }
+  | {
+      type: SlotType.STRING;
+      value: string;
+    }
+  | {
+      type: SlotType.REMOTE_FILE;
+
+      url: string;
+      filename: string;
+    }
+  | {
+      type: SlotType.LOCAL_FILE;
+      filename: string;
+    };
 
 @Injectable()
 export class InterpreterService {
@@ -23,7 +45,7 @@ export class InterpreterService {
   async valueFlow(
     program: Program,
     keys: Array<number>,
-    values: Array<number | string>,
+    values: Array<SlotValue>,
   ) {
     // put input values into redis
     if (keys.length !== values.length) {
@@ -38,14 +60,17 @@ export class InterpreterService {
       for (const link of links) {
         if (+key !== link.from) continue;
 
-        // key = link.from
         keys.push(link.to);
         values.push(value);
       }
     }
   }
 
-  async getResult(program: Program, pid: string, keys: number[]) {
+  async getResult(
+    program: Program,
+    pid: string,
+    keys: number[],
+  ): Promise<SlotValue[]> {
     const outputKeys = [...Array(program.outputs.slots.length).keys()].map(
       (v) => v + program.inputs.slots.length,
     );
@@ -58,11 +83,8 @@ export class InterpreterService {
       pid,
       ...outputKeys.map((i) => i.toString()),
     );
-
-    const results = _.zipWith(program.outputs.slots, temps, (slot, result) => {
-      if (slot.type === 'number') {
-        return +result;
-      }
+    const results = _.zipWith(program.outputs.slots, temps, (slot, temp) => {
+      const result = JSON.parse(temp) as SlotValue;
       return result;
     });
 
@@ -98,10 +120,9 @@ export class InterpreterService {
         const inputs = _.zipWith(
           newProgram.inputs.slots,
           temps,
-          (slot, result) => {
-            if (slot.type === 'number') {
-              return +result;
-            }
+          (slot, temp) => {
+            const result = JSON.parse(temp) as SlotValue;
+
             return result;
           },
         );
@@ -109,7 +130,7 @@ export class InterpreterService {
         const res = await this.run(newProgram, inputs, pid);
         if ('pid' in res) {
           // asynchronized process
-          await this.redis.hmset(pid, {
+          await this.redis.hset(pid, {
             [res.pid]: JSON.stringify(p.outputs),
           });
           return [];
@@ -117,8 +138,11 @@ export class InterpreterService {
           const keys = p.outputs;
           const values = res.result;
           this.valueFlow(program, keys, values);
-          const mp = _.zipObject(keys, values);
-          await this.redis.hmset(pid, mp);
+          const mp = _.zipObject(
+            keys,
+            values.map((value) => JSON.stringify(value)),
+          );
+          await this.redis.hset(pid, mp);
           return keys;
         }
       });
@@ -130,13 +154,13 @@ export class InterpreterService {
 
   async run(
     program: Program,
-    inputs: Array<string | number>,
-    parent = '',
+    inputs: Array<SlotValue>,
+    parent = undefined,
   ): Promise<
     | {
         pid: string;
       }
-    | { result: Array<string | number> }
+    | { result: Array<SlotValue> }
   > {
     for (const builtin of builtins) {
       if (
@@ -156,14 +180,16 @@ export class InterpreterService {
     const values = inputs;
     this.valueFlow(program, keys, values);
 
-    const mp = _.zipObject(keys, values);
-    mp.program = JSON.stringify(program);
-    if (parent.length !== 0) {
-      mp.parent = parent;
-    }
-    await this.redis.hmset(pid, mp);
+    const mp = _.zipObject(
+      keys,
+      values.map((value) => JSON.stringify(value)),
+    );
 
-    console.log(keys, values);
+    const obj = Object.assign({}, mp, {
+      program: JSON.stringify(program),
+      parent,
+    });
+    await this.redis.hset(pid, obj);
 
     let k = keys;
     while (!_.isEmpty(k)) {
@@ -176,11 +202,14 @@ export class InterpreterService {
       }
       k = await this.despatch(program, pid, k);
     }
-    await this.redis.zadd('processes', new Date().getTime(), pid);
+    await this.redis.rpush(`processes:type:${program.name}`, pid);
     return { pid };
   }
 
-  async finish(pid: string, outputs: Array<string | number>) {
+  async finish(
+    pid: string,
+    outputs: Array<SlotValue>,
+  ): Promise<{ result: Array<SlotValue> }> {
     console.log('finished', pid);
     const parent = (await this.redis.hmget(pid, 'parent'))[0];
     await this.redis.del(pid);
@@ -201,8 +230,11 @@ export class InterpreterService {
     const values = outputs;
     this.valueFlow(program, keys, values);
 
-    const mp = _.zipObject(keys, values);
-    await this.redis.hmset(pid, mp);
+    const mp = _.zipObject(
+      keys,
+      values.map((value) => JSON.stringify(value)),
+    );
+    await this.redis.hset(pid, mp);
 
     let k = keys;
     while (!_.isEmpty(k)) {

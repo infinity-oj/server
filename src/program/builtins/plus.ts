@@ -1,3 +1,4 @@
+import { SlotType, SlotValue } from '@/interpreter/interpreter.service';
 import { Program } from '../entities/program.entity';
 import { BuildinProgram } from './interfaces';
 
@@ -20,14 +21,22 @@ program.programs = [];
 program.links = [];
 
 export class PlusProgram implements BuildinProgram {
-  implementation: (...inputs: (string | number)[]) => (string | number)[] = (
-    ...inputs: (string | number)[]
+  implementation: (...inputs: SlotValue[]) => SlotValue[] = (
+    ...inputs: SlotValue[]
   ) => {
     let res = 0;
     for (const v of inputs) {
-      res += +v;
+      if (v.type !== SlotType.NUMBER) {
+        throw new Error('Program Plus requires type number');
+      }
+      res += v.value;
     }
-    return [res];
+    return [
+      {
+        type: SlotType.NUMBER,
+        value: res,
+      },
+    ];
   };
   program: Program = program;
 }

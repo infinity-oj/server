@@ -7,5 +7,6 @@ import { InterpreterController } from './interpreter.controller';
   imports: [ProgramModule],
   providers: [InterpreterService],
   controllers: [InterpreterController],
+  exports: [InterpreterService],
 })
 export class InterpreterModule {}

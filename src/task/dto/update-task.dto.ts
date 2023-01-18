@@ -1,4 +1,7 @@
-import { PartialType } from '@nestjs/swagger';
-import { CreateTaskDto } from './create-task.dto';
+import { SlotValue } from '@/interpreter/interpreter.service';
+import { IsArray } from 'class-validator';
 
-export class UpdateTaskDto extends PartialType(CreateTaskDto) {}
+export class UpdateTaskDto {
+  @IsArray()
+  outputs: Array<SlotValue>;
+}
