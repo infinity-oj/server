@@ -1,18 +1,21 @@
+import { Judgement } from '@/judgement/entities/judgement.entity';
 import { builtins } from '@/program/builtins';
 import { Program } from '@/program/entities/program.entity';
 import { ProgramService } from '@/program/program.service';
 import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import Redis from 'ioredis';
 import _ from 'lodash';
 
 import { v4 as uuid } from 'uuid';
 
 export enum SlotType {
-  STRING = 'STRING',
-  NUMBER = 'NUMBER',
-  LOCAL_FILE = 'LOCAL_FILE',
-  REMOTE_FILE = 'REMOTE_FILE',
+  STRING = 'string',
+  NUMBER = 'number',
+  LOCAL_FILE = 'local_file',
+  REMOTE_FILE = 'remote_file',
+  S3_FILE = 's3_file',
 }
 
 export type SlotValue =
@@ -26,13 +29,16 @@ export type SlotValue =
     }
   | {
       type: SlotType.REMOTE_FILE;
-
       url: string;
       filename: string;
     }
   | {
       type: SlotType.LOCAL_FILE;
       filename: string;
+    }
+  | {
+      type: SlotType.S3_FILE;
+      key: string;
     };
 
 @Injectable()
@@ -40,7 +46,35 @@ export class InterpreterService {
   constructor(
     @InjectRedis() private readonly redis: Redis,
     private readonly programService: ProgramService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
+
+  @OnEvent('judgement.created')
+  async onJudgementCreated({ judgement }: { judgement: Judgement }) {
+    const { program, inputs } = judgement;
+    const res = await this.run(program, inputs);
+    if ('pid' in res) {
+      // async task
+      const pid = res['pid'];
+      await this.setJudgementNameByPid(pid, judgement.name);
+    } else {
+      // finished task
+      await this.emitProgramFinished(judgement.name, res.result);
+    }
+    return res;
+  }
+  async getJudgementNameByPid(pid: string) {
+    return await this.redis.get(`pid:${pid}:judgement`);
+  }
+  async setJudgementNameByPid(pid: string, name: string) {
+    return await this.redis.set(`pid:${pid}:judgement`, name);
+  }
+  async emitProgramFinished(judgementName: string, outputs: Array<SlotValue>) {
+    this.eventEmitter.emit('program.finished', {
+      judgement: judgementName,
+      outputs,
+    });
+  }
 
   async valueFlow(
     program: Program,
@@ -209,12 +243,13 @@ export class InterpreterService {
   async finish(
     pid: string,
     outputs: Array<SlotValue>,
-  ): Promise<{ result: Array<SlotValue> }> {
+  ): Promise<{ pid: string; result: Array<SlotValue> }> {
     console.log('finished', pid);
     const parent = (await this.redis.hmget(pid, 'parent'))[0];
     await this.redis.del(pid);
     if (!parent) {
       return {
+        pid,
         result: outputs,
       };
     }
@@ -240,10 +275,8 @@ export class InterpreterService {
     while (!_.isEmpty(k)) {
       const result = await this.getResult(program, pid, k);
       if (result) {
-        await this.finish(pid, result);
         console.log(pid, result);
-        await this.redis.del(pid);
-        return { result };
+        return await this.finish(pid, result);
       }
       k = await this.despatch(program, pid, k);
     }

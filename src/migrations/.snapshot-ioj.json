@@ -75,90 +75,38 @@
           "nullable": false,
           "mappedType": "integer"
         },
-        "name": {
-          "name": "name",
-          "type": "varchar(255)",
+        "uuid": {
+          "name": "uuid",
+          "type": "varchar(36)",
           "unsigned": false,
           "autoincrement": false,
           "primary": false,
           "nullable": false,
+          "length": 36,
           "mappedType": "string"
         },
-        "client_id": {
-          "name": "client_id",
+        "size": {
+          "name": "size",
           "type": "int",
-          "unsigned": true,
+          "unsigned": false,
           "autoincrement": false,
           "primary": false,
           "nullable": false,
           "mappedType": "integer"
         },
-        "status": {
-          "name": "status",
-          "type": "tinyint",
+        "upload_time": {
+          "name": "upload_time",
+          "type": "datetime",
           "unsigned": false,
           "autoincrement": false,
           "primary": false,
           "nullable": false,
-          "mappedType": "enum"
-        },
-        "public_volume": {
-          "name": "public_volume",
-          "type": "varchar(255)",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": true,
-          "mappedType": "string"
-        },
-        "private_volume": {
-          "name": "private_volume",
-          "type": "varchar(255)",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": true,
-          "mappedType": "string"
-        },
-        "user_volume": {
-          "name": "user_volume",
-          "type": "varchar(255)",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": true,
-          "mappedType": "string"
-        },
-        "token": {
-          "name": "token",
-          "type": "varchar(255)",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": true,
-          "mappedType": "string"
-        },
-        "file_token": {
-          "name": "file_token",
-          "type": "varchar(255)",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": true,
-          "mappedType": "string"
+          "length": 0,
+          "mappedType": "datetime"
         }
       },
-      "name": "judgement",
+      "name": "file",
       "indexes": [
-        {
-          "columnNames": [
-            "client_id"
-          ],
-          "composite": false,
-          "keyName": "judgement_client_id_index",
-          "primary": false,
-          "unique": false
-        },
         {
           "keyName": "PRIMARY",
           "columnNames": [
@@ -170,20 +118,7 @@
         }
       ],
       "checks": [],
-      "foreignKeys": {
-        "judgement_client_id_foreign": {
-          "constraintName": "judgement_client_id_foreign",
-          "columnNames": [
-            "client_id"
-          ],
-          "localTableName": "judgement",
-          "referencedColumnNames": [
-            "id"
-          ],
-          "referencedTableName": "client",
-          "updateRule": "cascade"
-        }
-      }
+      "foreignKeys": {}
     },
     {
       "columns": {
@@ -265,6 +200,148 @@
       ],
       "checks": [],
       "foreignKeys": {}
+    },
+    {
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "unsigned": true,
+          "autoincrement": true,
+          "primary": true,
+          "nullable": false,
+          "mappedType": "integer"
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(255)",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "mappedType": "string"
+        },
+        "client_id": {
+          "name": "client_id",
+          "type": "int",
+          "unsigned": true,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "mappedType": "integer"
+        },
+        "status": {
+          "name": "status",
+          "type": "tinyint",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "mappedType": "enum"
+        },
+        "program_id": {
+          "name": "program_id",
+          "type": "int",
+          "unsigned": true,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "mappedType": "integer"
+        },
+        "inputs": {
+          "name": "inputs",
+          "type": "json",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "mappedType": "json"
+        },
+        "outputs": {
+          "name": "outputs",
+          "type": "json",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "mappedType": "json"
+        },
+        "token": {
+          "name": "token",
+          "type": "varchar(255)",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "mappedType": "string"
+        },
+        "file_token": {
+          "name": "file_token",
+          "type": "varchar(255)",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "mappedType": "string"
+        }
+      },
+      "name": "judgement",
+      "indexes": [
+        {
+          "columnNames": [
+            "client_id"
+          ],
+          "composite": false,
+          "keyName": "judgement_client_id_index",
+          "primary": false,
+          "unique": false
+        },
+        {
+          "columnNames": [
+            "program_id"
+          ],
+          "composite": false,
+          "keyName": "judgement_program_id_index",
+          "primary": false,
+          "unique": false
+        },
+        {
+          "keyName": "PRIMARY",
+          "columnNames": [
+            "id"
+          ],
+          "composite": false,
+          "primary": true,
+          "unique": true
+        }
+      ],
+      "checks": [],
+      "foreignKeys": {
+        "judgement_client_id_foreign": {
+          "constraintName": "judgement_client_id_foreign",
+          "columnNames": [
+            "client_id"
+          ],
+          "localTableName": "judgement",
+          "referencedColumnNames": [
+            "id"
+          ],
+          "referencedTableName": "client",
+          "updateRule": "cascade"
+        },
+        "judgement_program_id_foreign": {
+          "constraintName": "judgement_program_id_foreign",
+          "columnNames": [
+            "program_id"
+          ],
+          "localTableName": "judgement",
+          "referencedColumnNames": [
+            "id"
+          ],
+          "referencedTableName": "program",
+          "updateRule": "cascade"
+        }
+      }
     },
     {
       "columns": {

@@ -29,13 +29,13 @@ export class FileService {
     // };
 
     this.minioClient = new MinioClient({
-      endPoint: '192.168.1.17',
-      port: 9000,
-      useSSL: false,
-      accessKey: 'nKPRpQHXAoh0wzqz',
-      secretKey: 'CcHDEuEFyzOzAnTJGmSQvHwDeBMt0gVb',
+      endPoint: process.env.MINIO_HOST,
+      port: Number(process.env.MINIO_PORT),
+      useSSL: process.env.MINIO_USESSL === 'true',
+      accessKey: process.env.MINIO_USER,
+      secretKey: process.env.MINIO_PASSWORD,
     });
-    this.bucket = 'ioj-submissions';
+    this.bucket = process.env.MINIO_BUCKET;
   }
 
   fileExistsInMinio(uuid: string): Promise<boolean> {
@@ -71,11 +71,11 @@ export class FileService {
     };
   }
 
-  async getPresignedUploadUrl() {
+  async signDownloadUrl(key: string): Promise<string> {
     return new Promise((resolve, reject) => {
-      this.minioClient.presignedPutObject(
+      this.minioClient.presignedGetObject(
         this.bucket,
-        'hello.txt',
+        key,
         24 * 60 * 60,
         (err, presignedUrl) => (err ? reject(err) : resolve(presignedUrl)),
       );

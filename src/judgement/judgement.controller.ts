@@ -7,6 +7,8 @@ import {
   Param,
   Delete,
   ForbiddenException,
+  BadRequestException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { JudgementService } from './judgement.service';
 import {
@@ -15,17 +17,55 @@ import {
 } from './dto/create-judgement.dto';
 import { UpdateJudgementDto } from './dto/update-judgement.dto';
 import { ClientService } from '@/client/client.service';
+import { ProgramService } from '@/program/program.service';
+import _ from 'lodash';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { SlotValue } from '@/interpreter/interpreter.service';
 
 @Controller('judgement')
 export class JudgementController {
   constructor(
     private readonly judgementService: JudgementService,
     private readonly clientService: ClientService,
+    private readonly programService: ProgramService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   @Post()
-  create(@Body() createJudgementDto: CreateJudgementDto) {
-    return this.judgementService.create(createJudgementDto);
+  async create(@Body() dto: CreateJudgementDto) {
+    const client = await this.clientService.findOneByToken(dto.clientToken);
+    if (_.isNull(client)) {
+      throw new ForbiddenException();
+    }
+
+    const program = await this.programService.findOneByName(dto.program);
+    if (_.isNull(program)) {
+      throw new BadRequestException('unknown program');
+    }
+
+    const judgement = await this.judgementService.create(
+      client,
+      program,
+      dto.inputs,
+    );
+    const res = (await this.eventEmitter.emitAsync('judgement.created', {
+      judgement,
+    })) as Array<
+      | {
+          pid: string;
+        }
+      | { result: Array<SlotValue> }
+    >;
+
+    if (res.length !== 1) {
+      throw new InternalServerErrorException();
+    }
+
+    if ('result' in res[0]) {
+      judgement.outputs = res[0].result;
+    }
+
+    return judgement;
   }
 
   @Post('/traditional')

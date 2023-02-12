@@ -8,5 +8,6 @@ import { File } from './entities/file.entity';
   imports: [MikroOrmModule.forFeature([File])],
   controllers: [FileController],
   providers: [FileService],
+  exports: [FileService],
 })
 export class FileModule {}

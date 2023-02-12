@@ -8,10 +8,13 @@ import {
 } from '@mikro-orm/core';
 import { VM } from '@/vm/entities/vm.entity';
 import { Client } from '@/client/entities/client.entity';
+import { SlotValue } from '@/interpreter/interpreter.service';
+import { Program } from '@/program/entities/program.entity';
 
 export enum JudgementStatus {
   Pending,
   Canceled,
+  Finished,
 
   SystemError,
   ConfigurationError,
@@ -48,14 +51,14 @@ export class Judgement {
   @Enum(() => JudgementStatus)
   status!: JudgementStatus;
 
-  @Property({ nullable: true })
-  publicVolume: string;
+  @ManyToOne()
+  program: Program;
 
-  @Property({ nullable: true })
-  privateVolume: string;
+  @Property({ type: 'json', nullable: true })
+  inputs: Array<SlotValue>;
 
-  @Property({ nullable: true })
-  userVolume: string;
+  @Property({ type: 'json', nullable: true })
+  outputs: Array<SlotValue>;
 
   @Property({ nullable: true })
   token: string;

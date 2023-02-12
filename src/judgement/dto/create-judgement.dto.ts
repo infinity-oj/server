@@ -1,6 +1,15 @@
+import { SlotValue } from '@/interpreter/interpreter.service';
 import { IsOptional, IsString } from 'class-validator';
 
-export class CreateJudgementDto {}
+export class CreateJudgementDto {
+  @IsString()
+  clientToken: string;
+
+  @IsString()
+  program: string;
+
+  inputs?: Array<SlotValue>;
+}
 
 export class CreateTraditionalJudgementDto {
   @IsString()

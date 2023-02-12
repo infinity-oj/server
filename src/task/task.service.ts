@@ -3,18 +3,21 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 import { InjectRedis } from '@liaoliaots/nestjs-redis';
 import Redis from 'ioredis';
 import { v4 as uuid } from 'uuid';
-import { Program } from '@/program/entities/program.entity';
-import _ from 'lodash';
+import { Program, SlotDef } from '@/program/entities/program.entity';
+import _, { result } from 'lodash';
 import {
   InterpreterService,
+  SlotType,
   SlotValue,
 } from '@/interpreter/interpreter.service';
+import { FileService } from '@/file/file.service';
 
 @Injectable()
 export class TaskService {
   constructor(
     @InjectRedis() private readonly redis: Redis,
     private readonly interpreterService: InterpreterService,
+    private readonly fileService: FileService,
   ) {}
 
   async stat() {
@@ -41,19 +44,42 @@ export class TaskService {
 
     const ctx = await this.redis.hgetall(pid);
     const program = JSON.parse(ctx.program) as Program;
-    const inputKeys = [...Array(program.outputs.slots.length).keys()];
+    const inputKeys = [...Array(program.inputs.slots.length).keys()];
 
     const results = await this.redis.hmget(
       pid,
       ...inputKeys.map((i) => i.toString()),
     );
-    const inputSlots = results.map((res) => JSON.parse(res) as SlotValue);
+
+    // TODO: validation
+
+    // deal with files
+    const inputs = await Promise.all(
+      _.zipWith(
+        program.inputs.slots,
+        results.map((res) => JSON.parse(res) as SlotValue),
+        async (def: SlotDef, value: SlotValue): Promise<SlotValue> => {
+          console.log(def, value);
+          if (value.type !== SlotType.S3_FILE) {
+            return value;
+          }
+          const url = await this.fileService.signDownloadUrl(value.key);
+          return {
+            type: SlotType.REMOTE_FILE,
+            url,
+            filename: def.name,
+          };
+        },
+      ),
+    );
+
+    console.log(JSON.stringify(inputs));
 
     await this.redis.set(`task:${taskId}:process`, pid);
     return {
       id: taskId,
       type: program.name,
-      inputs: inputSlots,
+      inputs,
     };
   }
 
@@ -71,6 +97,8 @@ export class TaskService {
     // TODO: outputs validation
 
     const res = await this.interpreterService.finish(pid, outputs);
+
+    // TODO: Trigger Event
     console.log(res);
   }
 }
