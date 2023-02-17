@@ -25,10 +25,10 @@ export class FileController {
     return await this.fileService.signUploadRequest();
   }
 
-  // @Get(':id')
-  // findOne(@Param('id') id: string) {
-  //   return this.fileService.findOne(+id);
-  // }
+  @Get(':key')
+  findOne(@Param('key') key: string) {
+    return this.fileService.findOne(key);
+  }
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateFileDto: UpdateFileDto) {

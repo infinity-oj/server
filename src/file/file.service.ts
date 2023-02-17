@@ -90,8 +90,8 @@ export class FileService {
     return `This action returns all file`;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} file`;
+  async findOne(key: string) {
+    return await this.signDownloadUrl(key);
   }
 
   update(id: number, updateFileDto: UpdateFileDto) {

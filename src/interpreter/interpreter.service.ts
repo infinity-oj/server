@@ -15,7 +15,9 @@ export enum SlotType {
   NUMBER = 'number',
   LOCAL_FILE = 'local_file',
   REMOTE_FILE = 'remote_file',
+  REMOTE_DIR = 'remote_dir',
   S3_FILE = 's3_file',
+  S3_DIR = 's3_dir',
 }
 
 export type SlotValue =
@@ -29,16 +31,22 @@ export type SlotValue =
     }
   | {
       type: SlotType.REMOTE_FILE;
-      url: string;
-      filename: string;
+      files: Array<{
+        url: string;
+        filename: string;
+      }>;
     }
   | {
       type: SlotType.LOCAL_FILE;
-      filename: string;
+      files: Array<string>;
     }
   | {
       type: SlotType.S3_FILE;
       key: string;
+    }
+  | {
+      type: SlotType.S3_DIR;
+      keys: Array<string>;
     };
 
 @Injectable()
@@ -248,6 +256,9 @@ export class InterpreterService {
     const parent = (await this.redis.hmget(pid, 'parent'))[0];
     await this.redis.del(pid);
     if (!parent) {
+      const judgementName = await this.getJudgementNameByPid(pid);
+      await this.emitProgramFinished(judgementName, outputs);
+    
       return {
         pid,
         result: outputs,

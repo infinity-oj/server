@@ -60,7 +60,9 @@ export class JudgementService {
         outputs: outputs,
       })
       .subscribe({
-        next: (result) => {},
+        next: (result) => {
+          console.log(result);
+        },
         error: (err: any) => {
           console.error(err);
         },

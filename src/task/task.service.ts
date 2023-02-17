@@ -60,14 +60,24 @@ export class TaskService {
         results.map((res) => JSON.parse(res) as SlotValue),
         async (def: SlotDef, value: SlotValue): Promise<SlotValue> => {
           console.log(def, value);
-          if (value.type !== SlotType.S3_FILE) {
+          let keys = [];
+          if (value.type === SlotType.S3_DIR) {
+            keys = value.keys;
+          } else if (value.type === SlotType.S3_FILE) {
+            keys = [value.key];
+          } else {
             return value;
           }
-          const url = await this.fileService.signDownloadUrl(value.key);
+          const urls = await Promise.all(
+            keys.map((key) => this.fileService.signDownloadUrl(key)),
+          );
+
           return {
             type: SlotType.REMOTE_FILE,
-            url,
-            filename: def.name,
+            files: urls.map((url, i) => ({
+              url,
+              filename: `${def.name}-${i}`,
+            })),
           };
         },
       ),
