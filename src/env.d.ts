@@ -11,8 +11,11 @@ declare global {
       DATABASE_PORT: string;
       DATABASE_USER: string;
       DATABASE_PASSWORD: string;
+
+      QINIU_AK: string;
+      QINIU_SK: string;
     }
   }
 }
 
-export {};
+export { };
