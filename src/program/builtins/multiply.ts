@@ -1,4 +1,4 @@
-import { SlotType, SlotValue } from '@/interpreter/interpreter.service';
+import { SlotType, SlotValue } from '@/interpreter/slots';
 import { Program } from '../entities/program.entity';
 import { BuildinProgram } from './interfaces';
 
@@ -8,12 +8,12 @@ program.name = 'multiply';
 
 program.inputs = {
   slots: [
-    { name: 'oprand 1', type: 'number' },
-    { name: 'oprand 2', type: 'number' },
+    { name: 'oprand 1', type: SlotType.NUMBER },
+    { name: 'oprand 2', type: SlotType.NUMBER },
   ],
 };
 program.outputs = {
-  slots: [{ name: 'result', type: 'number' }],
+  slots: [{ name: 'result', type: SlotType.NUMBER }],
 };
 
 program.programs = [];

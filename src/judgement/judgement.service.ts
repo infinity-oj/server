@@ -6,7 +6,7 @@ import { UpdateJudgementDto } from './dto/update-judgement.dto';
 import { Judgement, JudgementStatus } from './entities/judgement.entity';
 import { v4 as uuid } from 'uuid';
 import { Program } from '@/program/entities/program.entity';
-import { SlotValue } from '@/interpreter/interpreter.service';
+import { SlotValue } from '@/interpreter/slots';
 import { HttpService } from '@nestjs/axios';
 import { OnEvent } from '@nestjs/event-emitter';
 import _ from 'lodash';
@@ -61,7 +61,7 @@ export class JudgementService {
       })
       .subscribe({
         next: (result) => {
-          console.log(result);
+          console.log('result', result);
         },
         error: (err: any) => {
           console.error(err);

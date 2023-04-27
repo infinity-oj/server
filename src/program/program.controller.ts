@@ -25,9 +25,9 @@ export class ProgramController {
     return this.programService.findAll();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.programService.findOne(+id);
+  @Get(':name')
+  findOne(@Param('name') name: string) {
+    return this.programService.findOneByName(name);
   }
 
   @Patch(':id')

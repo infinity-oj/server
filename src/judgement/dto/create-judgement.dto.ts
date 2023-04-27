@@ -1,4 +1,4 @@
-import { SlotValue } from '@/interpreter/interpreter.service';
+import { SlotValue } from '@/interpreter/slots';
 import { IsOptional, IsString } from 'class-validator';
 
 export class CreateJudgementDto {

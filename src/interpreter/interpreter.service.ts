@@ -9,45 +9,7 @@ import Redis from 'ioredis';
 import _ from 'lodash';
 
 import { v4 as uuid } from 'uuid';
-
-export enum SlotType {
-  STRING = 'string',
-  NUMBER = 'number',
-  LOCAL_FILE = 'local_file',
-  REMOTE_FILE = 'remote_file',
-  REMOTE_DIR = 'remote_dir',
-  S3_FILE = 's3_file',
-  S3_DIR = 's3_dir',
-}
-
-export type SlotValue =
-  | {
-      type: SlotType.NUMBER;
-      value: number;
-    }
-  | {
-      type: SlotType.STRING;
-      value: string;
-    }
-  | {
-      type: SlotType.REMOTE_FILE;
-      files: Array<{
-        url: string;
-        filename: string;
-      }>;
-    }
-  | {
-      type: SlotType.LOCAL_FILE;
-      files: Array<string>;
-    }
-  | {
-      type: SlotType.S3_FILE;
-      key: string;
-    }
-  | {
-      type: SlotType.S3_DIR;
-      keys: Array<string>;
-    };
+import { SlotValue } from './slots';
 
 @Injectable()
 export class InterpreterService {
@@ -149,25 +111,30 @@ export class InterpreterService {
         return _.intersection(p.inputs, keys).length !== 0;
       })
       .map(async (p) => {
-        const temps = await this.redis.hmget(
+        const requiredSlots = p.inputs
+          .map((input) => (typeof input === 'number' ? input : -1))
+          .filter((i) => i !== -1);
+        const requiredValues = await this.redis.hmget(
           pid,
-          ...p.inputs.map((i) => i.toString()),
+          ...requiredSlots.map((i) => i.toString()),
         );
-        if (temps.some((res) => _.isNil(res))) {
+        if (requiredValues.some((res) => _.isNil(res))) {
           return [];
         }
+        const mp = _.zipObject(
+          requiredSlots,
+          requiredValues.map((v) => JSON.parse(v) as SlotValue),
+        );
 
         const newProgram = await this.programService.findOneByName(p.name);
 
-        const inputs = _.zipWith(
-          newProgram.inputs.slots,
-          temps,
-          (slot, temp) => {
-            const result = JSON.parse(temp) as SlotValue;
-
-            return result;
-          },
-        );
+        const inputs = p.inputs.map((input) => {
+          if (typeof input === 'number') {
+            return mp[input];
+          } else {
+            return input;
+          }
+        });
 
         const res = await this.run(newProgram, inputs, pid);
         if ('pid' in res) {
@@ -204,6 +171,17 @@ export class InterpreterService {
       }
     | { result: Array<SlotValue> }
   > {
+    const consts = program.inputs.slots
+      .filter((slot) => !_.isNil(slot.const))
+      .map(
+        (slot) =>
+          ({
+            type: slot.type,
+            value: slot.const,
+          } as SlotValue),
+      );
+    inputs = _.concat(inputs, consts);
+
     for (const builtin of builtins) {
       if (
         builtin.program.name === program.name &&
@@ -252,13 +230,12 @@ export class InterpreterService {
     pid: string,
     outputs: Array<SlotValue>,
   ): Promise<{ pid: string; result: Array<SlotValue> }> {
-    console.log('finished', pid);
     const parent = (await this.redis.hmget(pid, 'parent'))[0];
     await this.redis.del(pid);
     if (!parent) {
       const judgementName = await this.getJudgementNameByPid(pid);
       await this.emitProgramFinished(judgementName, outputs);
-    
+
       return {
         pid,
         result: outputs,

@@ -1,4 +1,4 @@
-import { SlotValue } from '@/interpreter/interpreter.service';
+import { SlotValue } from '@/interpreter/slots';
 import { Program } from '../entities/program.entity';
 
 export interface PresetProgram {

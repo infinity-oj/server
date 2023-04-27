@@ -20,7 +20,7 @@ import { ClientService } from '@/client/client.service';
 import { ProgramService } from '@/program/program.service';
 import _ from 'lodash';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { SlotValue } from '@/interpreter/interpreter.service';
+import { SlotValue } from '@/interpreter/slots';
 
 @Controller('judgement')
 export class JudgementController {

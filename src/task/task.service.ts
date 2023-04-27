@@ -5,11 +5,8 @@ import Redis from 'ioredis';
 import { v4 as uuid } from 'uuid';
 import { Program, SlotDef } from '@/program/entities/program.entity';
 import _, { result } from 'lodash';
-import {
-  InterpreterService,
-  SlotType,
-  SlotValue,
-} from '@/interpreter/interpreter.service';
+import { InterpreterService } from '@/interpreter/interpreter.service';
+import { SlotType, SlotValue } from '@/interpreter/slots';
 import { FileService } from '@/file/file.service';
 
 @Injectable()
@@ -59,7 +56,6 @@ export class TaskService {
         program.inputs.slots,
         results.map((res) => JSON.parse(res) as SlotValue),
         async (def: SlotDef, value: SlotValue): Promise<SlotValue> => {
-          console.log(def, value);
           let keys = [];
           if (value.type === SlotType.S3_DIR) {
             keys = value.keys;
@@ -83,9 +79,9 @@ export class TaskService {
       ),
     );
 
-    console.log(JSON.stringify(inputs));
-
     await this.redis.set(`task:${taskId}:process`, pid);
+
+    console.log('fetch=>', program.name, JSON.stringify(inputs));
     return {
       id: taskId,
       type: program.name,
@@ -109,6 +105,6 @@ export class TaskService {
     const res = await this.interpreterService.finish(pid, outputs);
 
     // TODO: Trigger Event
-    console.log(res);
+    console.log('res', res);
   }
 }

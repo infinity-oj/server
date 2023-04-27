@@ -1,6 +1,8 @@
+import { SlotType } from '@/interpreter/slots';
 import { Type } from 'class-transformer';
 import {
   IsArray,
+  IsEnum,
   IsNotEmpty,
   IsNumber,
   IsString,
@@ -12,9 +14,9 @@ class SlotDef {
   @IsNotEmpty()
   name: string;
 
-  @IsString()
+  @IsEnum(() => SlotType)
   @IsNotEmpty()
-  type: string;
+  type: SlotType;
 }
 
 class LinkDef {

@@ -8,7 +8,7 @@ import {
 } from '@mikro-orm/core';
 import { VM } from '@/vm/entities/vm.entity';
 import { Client } from '@/client/entities/client.entity';
-import { SlotValue } from '@/interpreter/interpreter.service';
+import { SlotValue } from '@/interpreter/slots';
 import { Program } from '@/program/entities/program.entity';
 
 export enum JudgementStatus {

@@ -1,7 +1,8 @@
 import { ProgramService } from '@/program/program.service';
 import { Body, Controller, NotFoundException, Post } from '@nestjs/common';
 import _ from 'lodash';
-import { InterpreterService, SlotValue } from './interpreter.service';
+import { InterpreterService } from './interpreter.service';
+import { SlotValue } from './slots';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Controller('interpreter')
@@ -18,9 +19,9 @@ export class InterpreterController {
     if (_.isEmpty(program)) {
       throw new NotFoundException();
     }
-    console.log(body.inputs);
+    console.log('post run, inputs: ', body.inputs);
     const res = await this.interpreterService.run(program, body.inputs);
-    console.log(res);
+    console.log('post run, res: ', res);
   }
 
   @Post('result')
@@ -32,7 +33,7 @@ export class InterpreterController {
     }
 
     const res = await this.interpreterService.finish(pid, outputs);
-    console.log(res);
+    console.log('post result, res:', res);
     await this.interpreterService.emitProgramFinished(judgement, outputs);
   }
 }
