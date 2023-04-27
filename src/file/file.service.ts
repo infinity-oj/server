@@ -2,12 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { CreateFileDto } from './dto/create-file.dto';
 import { UpdateFileDto } from './dto/update-file.dto';
 
-import { Client as MinioClient, ClientOptions } from 'minio';
+import { Client as MinioClient } from 'minio';
 import { InjectRepository } from '@mikro-orm/nestjs';
-import { ConfigService } from '@nestjs/config';
 import { File } from './entities/file.entity';
 import { EntityRepository } from '@mikro-orm/core';
 import { v4 as UUID } from 'uuid';
+import { QiniuClient } from './clients/qiniu.client';
 
 @Injectable()
 export class FileService {
@@ -15,6 +15,7 @@ export class FileService {
   private readonly bucket: string;
 
   constructor(
+    private readonly qiniuClient: QiniuClient,
     @InjectRepository(File)
     private readonly fileRepository: EntityRepository<File>, // private readonly configService: ConfigService,
   ) {
@@ -72,14 +73,12 @@ export class FileService {
   }
 
   async signDownloadUrl(key: string): Promise<string> {
-    return new Promise((resolve, reject) => {
-      this.minioClient.presignedGetObject(
-        this.bucket,
-        key,
-        24 * 60 * 60,
-        (err, presignedUrl) => (err ? reject(err) : resolve(presignedUrl)),
-      );
-    });
+    const exist = await this.fileExistsInMinio(key);
+    if (exist) {
+      return await this.minioClient.presignedGetObject(this.bucket, key);
+    } else {
+      return this.qiniuClient.signDownloadLink(key);
+    }
   }
 
   create(createFileDto: CreateFileDto) {
