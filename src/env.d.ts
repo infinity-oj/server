@@ -14,8 +14,11 @@ declare global {
 
       REDIS_HOST: string;
       REDIS_PORT: string;
+      
+      QINIU_AK: string;
+      QINIU_SK: string;
     }
   }
 }
 
-export {};
+export { };
