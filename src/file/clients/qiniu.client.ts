@@ -9,10 +9,22 @@ export class QiniuClient implements FileClient {
     qiniu.conf.SECRET_KEY = process.env.QINIU_SK;
   }
 
-  async stat(): Promise<{ size: number } | { error: string }> {
-    return {
-      size: 0,
-    };
+
+  async stat(key: string): Promise<{ size: number } | { error: string }> {
+    const bucketManager = new qiniu.rs.BucketManager();
+    return new Promise((res, rej) => {
+      bucketManager.stat(this.bucket, key, (err, respBody, respInfo) => {
+        if (err) {
+          rej({ error: err.name })
+        } else {
+          if (respInfo.statusCode === 200) {
+            res({ size: respBody.fsize })
+          } else {
+            res({ error: respBody.error })
+          }
+        }
+      })
+    })
   }
 
   async signDownloadLink(key: string): Promise<string> {

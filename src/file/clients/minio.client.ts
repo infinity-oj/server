@@ -1,7 +1,7 @@
 import { FileClient } from "./client.interface";
 
 export class MinioClient implements FileClient {
-  async stat(): Promise<{ size: number; } | { error: string; }> {
+  async stat(key: string): Promise<{ size: number; } | { error: string; }> {
     return {
       size: 0
     }

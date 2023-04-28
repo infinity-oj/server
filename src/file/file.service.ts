@@ -29,14 +29,14 @@ export class FileService {
     //   region: 'us-east-1',
     // };
 
-    this.minioClient = new MinioClient({
-      endPoint: process.env.MINIO_HOST,
-      port: Number(process.env.MINIO_PORT),
-      useSSL: process.env.MINIO_USESSL === 'true',
-      accessKey: process.env.MINIO_USER,
-      secretKey: process.env.MINIO_PASSWORD,
-    });
-    this.bucket = process.env.MINIO_BUCKET;
+    // this.minioClient = new MinioClient({
+    //   endPoint: process.env.MINIO_HOST,
+    //   port: Number(process.env.MINIO_PORT),
+    //   useSSL: process.env.MINIO_USESSL === 'true',
+    //   accessKey: process.env.MINIO_USER,
+    //   secretKey: process.env.MINIO_PASSWORD,
+    // });
+    // this.bucket = process.env.MINIO_BUCKET;
   }
 
   fileExistsInMinio(uuid: string): Promise<boolean> {
@@ -52,32 +52,42 @@ export class FileService {
    * Sign a upload request for given size. The alternative MinIO endpoint for user will be used in the POST URL.
    */
   async signUploadRequest(minSize?: number, maxSize?: number) {
-    const signer = this.minioClient;
     const uuid = UUID();
-    const policy = signer.newPostPolicy();
-    policy.setBucket(this.bucket);
-    policy.setKey(uuid);
-    policy.setExpires(new Date(Date.now() + 24 * 30 * 1000));
-    if (minSize != null || maxSize != null) {
-      policy.setContentLengthRange(minSize || 0, maxSize || 0);
-    }
-    const policyResult = await signer.presignedPostPolicy(policy);
+    const qiniu = await this.qiniuClient.signUploadLink(uuid);
 
     return {
+      ...qiniu,
       uuid,
       method: 'POST',
-      url: policyResult.postURL,
-      extraFormData: policyResult.formData,
       fileFieldName: 'file',
     };
+    // const signer = this.minioClient;
+    // const uuid = UUID();
+    // const policy = signer.newPostPolicy();
+    // policy.setBucket(this.bucket);
+    // policy.setKey(uuid);
+    // policy.setExpires(new Date(Date.now() + 24 * 30 * 1000));
+    // if (minSize != null || maxSize != null) {
+    //   policy.setContentLengthRange(minSize || 0, maxSize || 0);
+    // }
+    // const policyResult = await signer.presignedPostPolicy(policy);
+
+    // return {
+    //   uuid,
+    //   method: 'POST',
+    //   url: policyResult.postURL,
+    //   extraFormData: policyResult.formData,
+    //   fileFieldName: 'file',
+    // };
   }
 
-  async signDownloadUrl(key: string): Promise<string> {
-    const exist = await this.fileExistsInMinio(key);
-    if (exist) {
-      return await this.minioClient.presignedGetObject(this.bucket, key);
-    } else {
+  async signDownloadUrl(key: string): Promise<any> {
+    const qiniuInfo = await this.qiniuClient.stat(key)
+    console.log(qiniuInfo)
+    if ('size' in qiniuInfo) {
       return this.qiniuClient.signDownloadLink(key);
+    } else {
+      return await this.minioClient.presignedGetObject(this.bucket, key);
     }
   }
 

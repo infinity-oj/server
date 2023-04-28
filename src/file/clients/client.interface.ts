@@ -1,6 +1,6 @@
 
 export interface FileClient {
-  stat(): Promise<{ size: number } | { error: string }>;
+  stat(key: string): Promise<{ size: number } | { error: string }>;
   signDownloadLink(key: string): Promise<string>;
   signUploadLink(key: string): Promise<{
     url: string,
