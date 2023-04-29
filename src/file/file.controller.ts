@@ -13,7 +13,7 @@ import { UpdateFileDto } from './dto/update-file.dto';
 
 @Controller('file')
 export class FileController {
-  constructor(private readonly fileService: FileService) {}
+  constructor(private readonly fileService: FileService) { }
 
   @Post()
   create(@Body() createFileDto: CreateFileDto) {
@@ -39,4 +39,5 @@ export class FileController {
   remove(@Param('id') id: string) {
     return this.fileService.remove(+id);
   }
+
 }

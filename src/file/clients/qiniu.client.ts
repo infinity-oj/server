@@ -46,7 +46,7 @@ export class QiniuClient implements FileClient {
     const options = {
       scope: resource_key,
       expires: 1800,
-      callbackUrl: 'https://eb3d-183-49-46-196.ngrok-free.app/file/callback',
+      callbackUrl: process.env.QINIU_CALLBACK_URL,
       callbackBody:
         '{"key":"$(key)","hash":"$(etag)","fsize":$(fsize),"bucket":"$(bucket)","name":"$(x:name)"}',
       callbackBodyType: 'application/json',
