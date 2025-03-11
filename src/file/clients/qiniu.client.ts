@@ -29,7 +29,7 @@ export class QiniuClient implements FileClient {
 
   async signDownloadLink(key: string): Promise<string> {
     const bucketManager = new qiniu.rs.BucketManager();
-    const privateBucketDomain = 'https://file.spaces.sustech.cloud';
+    const privateBucketDomain = 'https://cdn.lms.sustech.cloud';
     const deadline = moment().add({ days: 1 }).unix();
     const privateDownloadUrl = bucketManager.privateDownloadUrl(
       privateBucketDomain,

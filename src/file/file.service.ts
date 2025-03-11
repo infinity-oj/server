@@ -7,12 +7,10 @@ import { File } from './entities/file.entity';
 import { EntityRepository } from '@mikro-orm/core';
 import { v4 as UUID } from 'uuid';
 import { QiniuClient } from './clients/qiniu.client';
-import { MinioClient } from './clients/minio.client';
 
 @Injectable()
 export class FileService {
   constructor(
-    private readonly minioClient: MinioClient,
     private readonly qiniuClient: QiniuClient,
     @InjectRepository(File)
     private readonly fileRepository: EntityRepository<File>, // private readonly configService: ConfigService,
@@ -35,11 +33,7 @@ export class FileService {
 
   async signDownloadUrl(key: string): Promise<any> {
     const qiniuInfo = await this.qiniuClient.stat(key)
-    if ('size' in qiniuInfo) {
-      return this.qiniuClient.signDownloadLink(key);
-    } else {
-      return this.minioClient.signDownloadLink(key);
-    }
+    return this.qiniuClient.signDownloadLink(key);
   }
 
   async createFile(uuid: string, size: number) {
@@ -48,7 +42,7 @@ export class FileService {
     file.size = size;
     file.uploadTime = new Date();
     await this.fileRepository.persistAndFlush(file)
-    return file
+    return file;
   }
 
   create(createFileDto: CreateFileDto) {

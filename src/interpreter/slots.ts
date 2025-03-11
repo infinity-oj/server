@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 export enum SlotType {
   STRING = 'string',
   NUMBER = 'number',
@@ -36,3 +38,36 @@ export type SlotValue =
       type: SlotType.S3_DIR;
       keys: Array<string>;
     };
+export const slotTypeSchema = z.nativeEnum(SlotType);
+
+export const slotValueSchema = z.union([
+  z.object({
+    type: z.literal(SlotType.NUMBER),
+    value: z.number(),
+  }),
+  z.object({
+    type: z.literal(SlotType.STRING),
+    value: z.string(),
+  }),
+  z.object({
+    type: z.literal(SlotType.REMOTE_FILE),
+    files: z.array(
+      z.object({
+        url: z.string(),
+        filename: z.string(),
+      }),
+    ),
+  }),
+  z.object({
+    type: z.literal(SlotType.LOCAL_FILE),
+    files: z.array(z.string()),
+  }),
+  z.object({
+    type: z.literal(SlotType.S3_FILE),
+    key: z.string(),
+  }),
+  z.object({
+    type: z.literal(SlotType.S3_DIR),
+    keys: z.array(z.string()),
+  }),
+]);

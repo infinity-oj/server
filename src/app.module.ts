@@ -33,10 +33,17 @@ import { StatModule } from './stat/stat.module';
     }),
 
     RedisModule.forRoot({
-      config: {
-        host: process.env.REDIS_HOST,
-        port: Number(process.env.REDIS_PORT),
-      },
+      config: [
+        {
+          host: process.env.REDIS_HOST,
+          port: Number(process.env.REDIS_PORT),
+        },
+        {
+          namespace: 'sub',
+          host: process.env.REDIS_HOST,
+          port: Number(process.env.REDIS_PORT),
+        },
+      ],
     }),
 
     MikroOrmModule.forRoot(),

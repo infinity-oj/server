@@ -1,7 +1,7 @@
-FROM node:16-alpine as builder-with-pnpm
+FROM node:18-alpine as builder-with-pnpm
 
 ENV NODE_ENV build
-RUN npm --registry https://registry.npm.taobao.org install -g pnpm
+RUN npm install -g pnpm
 
 FROM builder-with-pnpm as builder
 
@@ -10,7 +10,7 @@ WORKDIR /home/node
 # pnpm fetch does require only lockfile
 COPY pnpm-lock.yaml ./
 
-RUN pnpm --registry https://registry.npm.taobao.org fetch
+RUN pnpm fetch
 
 COPY --chown=node:node . .
 RUN pnpm install -r --offline
@@ -19,7 +19,7 @@ RUN pnpm run build \
 
 # ---
 
-FROM node:16-alpine
+FROM node:18-alpine
 
 RUN echo "Asia/shanghai" > /etc/timezone
 
